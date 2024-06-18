@@ -78,8 +78,11 @@ jobs:
 
     - name: Sync image
       id: syncImage
+      env:
+        DEST_HARBOR_URL: ${{ vars.DEST_HARBOR_URL }}
       shell: bash
       run: |
+        echo DEST_HARBOR_URL $DEST_HARBOR_URL
         bash jenkins_sync_docker_images.sh docker_images.list
 
     - name: Success check

@@ -1,12 +1,13 @@
 #!/usr/bin/env bash
+set -x
 
 cd "$(dirname "$0")" || return 1
 SH_DIR=$(pwd)
 ME=$0
 PARAMETERS=$*
 config_file="$1"
-dest_repo="${DEST_HARBOR_URL}/${DEST_HARBOR_REGISTRY}"  # 包含仓库项目的名字
-dest_registry="${DEST_HARBOR_REGISTRY}"
+dest_registry="${DEST_HARBOR_REGISTRY:-library}"
+dest_repo="${DEST_HARBOR_URL}/${dest_registry}"  # 包含仓库项目的名字
 thread=3 # 此处定义线程数
 faillog="./failure.log" # 此处定义失败列表,注意失败列表会先被删除再重新写入
 echo >> "$config_file"  # 加行空行
@@ -233,7 +234,8 @@ function multi_process () {
     exec 6>&- # 关闭df6
 }
 
-have_skopeo=$(check_skopeo)
+check_skopeo
+have_skopeo=$?
 multi_process
 
 if [ -f $faillog ];then
