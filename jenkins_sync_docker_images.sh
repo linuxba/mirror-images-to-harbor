@@ -186,6 +186,7 @@ function sync_image() {
         fi
     else
         green_echo "已存在镜像，不需要推送[$dest_repo/$image_name:$image_tag]"
+        return 0
     fi
 }
 
