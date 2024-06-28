@@ -7,48 +7,47 @@ ME=$0
 PARAMETERS=$*
 config_file="$1"
 dest_registry="${DEST_HARBOR_REGISTRY:-library}"
-dest_repo="${DEST_HARBOR_URL}/${dest_registry}"  # 包含仓库项目的名字
-thread=3 # 此处定义线程数
-faillog="./failure.log" # 此处定义失败列表,注意失败列表会先被删除再重新写入
-echo >> "$config_file"  # 加行空行
+dest_repo="${DEST_HARBOR_URL}/${dest_registry}" # 包含仓库项目的名字
+thread=3                                        # 此处定义线程数
+faillog="./failure.log"                         # 此处定义失败列表,注意失败列表会先被删除再重新写入
+echo >>"$config_file"                           # 加行空行
 
-# docker login "$SRC_HARBOR_URL" -u "${SRC_HARBOR_CRE_USR}" -p "${SRC_HARBOR_CRE_PSW}"
-docker login "$DEST_HARBOR_URL" -u "${DEST_HARBOR_CRE_USR}" -p "${DEST_HARBOR_CRE_PSW}"
-
+# echo "${SRC_HARBOR_CRE_PSW}" | docker login --username "${SRC_HARBOR_CRE_USR}" --password-stdin $SRC_HARBOR_URL
+echo "${DEST_HARBOR_CRE_PSW}" | docker login --username "${DEST_HARBOR_CRE_USR}" --password-stdin $DEST_HARBOR_URL
 
 #定义输出颜色函数
-function red_echo () {
-#用法:  red_echo "内容"
+function red_echo() {
+    #用法:  red_echo "内容"
     local what="$*"
     echo -e "$(date +%F-%T) \e[1;31m ${what} \e[0m"
 }
 
-function green_echo () {
-#用法:  green_echo "内容"
+function green_echo() {
+    #用法:  green_echo "内容"
     local what="$*"
     echo -e "$(date +%F-%T) \e[1;32m ${what} \e[0m"
 }
 
-function yellow_echo () {
-#用法:  yellow_echo "内容"
+function yellow_echo() {
+    #用法:  yellow_echo "内容"
     local what="$*"
     echo -e "$(date +%F-%T) \e[1;33m ${what} \e[0m"
 }
 
-function blue_echo () {
-#用法:  blue_echo "内容"
+function blue_echo() {
+    #用法:  blue_echo "内容"
     local what="$*"
     echo -e "$(date +%F-%T) \e[1;34m ${what} \e[0m"
 }
 
-function twinkle_echo () {
+function twinkle_echo() {
     #用法:  twinkle_echo $(red_echo "内容")  ,此处例子为红色闪烁输出
     local twinkle='\e[05m'
     local what="${twinkle} $*"
     echo -e "$(date +%F-%T) ${what}"
 }
 
-function return_echo () {
+function return_echo() {
     if [ $? -eq 0 ]; then
         echo -n "$* " && green_echo "成功"
         return 0
@@ -58,11 +57,11 @@ function return_echo () {
     fi
 }
 
-function return_error_exit () {
+function return_error_exit() {
     [ $? -eq 0 ] && local REVAL="0"
     local what=$*
-    if [ "$REVAL" = "0" ];then
-        [ ! -z "$what" ] && { echo -n "$* " && green_echo "成功" ; }
+    if [ "$REVAL" = "0" ]; then
+        [ ! -z "$what" ] && { echo -n "$* " && green_echo "成功"; }
     else
         red_echo "$* 失败，脚本退出"
         exit 1
@@ -70,41 +69,43 @@ function return_error_exit () {
 }
 
 # 定义确认函数
-function user_verify_function () {
-    while true;do
+function user_verify_function() {
+    while true; do
         echo ""
         read -p "是否确认?[Y/N]:" Y
         case $Y in
-            [yY]|[yY][eE][sS])
-                echo -e "answer:  \\033[20G [ \e[1;32m是\e[0m ] \033[0m"
-                break
+        [yY] | [yY][eE][sS])
+            echo -e "answer:  \\033[20G [ \e[1;32m是\e[0m ] \033[0m"
+            break
             ;;
-            [nN]|[nN][oO])
-                echo -e "answer:  \\033[20G [ \e[1;32m否\e[0m ] \033[0m"
-                exit 1
+        [nN] | [nN][oO])
+            echo -e "answer:  \\033[20G [ \e[1;32m否\e[0m ] \033[0m"
+            exit 1
             ;;
-            *)
-                continue
+        *)
+            continue
+            ;;
         esac
     done
 }
 
 # 定义跳过函数
-function user_pass_function () {
-    while true;do
+function user_pass_function() {
+    while true; do
         echo ""
         read -p "是否确认?[Y/N]:" Y
         case $Y in
-            [yY]|[yY][eE][sS])
-                echo -e "answer:  \\033[20G [ \e[1;32m是\e[0m ] \033[0m"
-                break
-                ;;
-            [nN]|[nN][oO])
-                echo -e "answer:  \\033[20G [ \e[1;32m否\e[0m ] \033[0m"
-                return 1
-                ;;
-            *)
-                continue
+        [yY] | [yY][eE][sS])
+            echo -e "answer:  \\033[20G [ \e[1;32m是\e[0m ] \033[0m"
+            break
+            ;;
+        [nN] | [nN][oO])
+            echo -e "answer:  \\033[20G [ \e[1;32m否\e[0m ] \033[0m"
+            return 1
+            ;;
+        *)
+            continue
+            ;;
         esac
     done
 }
@@ -113,16 +114,16 @@ function check_image() {
     local image_name=$1
     local image_tag=$2
     local encoded
-    encoded=$(perl -MURI::Escape -lne 'chomp; print uri_escape($_)' <<< "$image_name")
+    encoded=$(perl -MURI::Escape -lne 'chomp; print uri_escape($_)' <<<"$image_name")
     curl -s -i --connect-timeout 10 -m 20 -u "$DEST_HARBOR_CRE_USR:$DEST_HARBOR_CRE_PSW" -k -X GET \
         -H "accept: application/json" \
-        "https://$DEST_HARBOR_URL/api/v2.0/projects/$dest_registry/repositories/$encoded/artifacts/$image_tag/tags?page=1&page_size=10&with_signature=false&with_immutable_status=false" \
-        | grep '"name":' > /dev/null
+        "https://$DEST_HARBOR_URL/api/v2.0/projects/$dest_registry/repositories/$encoded/artifacts/$image_tag/tags?page=1&page_size=10&with_signature=false&with_immutable_status=false" |
+        grep '"name":' >/dev/null
     return $?
 }
 
 function check_skopeo() {
-    command -v skopeo &> /dev/null
+    command -v skopeo &>/dev/null
 }
 
 function skopeo_sync_image() {
@@ -141,35 +142,38 @@ function docker_sync_image() {
     local line=$1
     local image_name=$2
     local image_tag=$3
-    docker pull $line \
-        && docker tag $line $dest_repo/$image_name:$image_tag \
-        && docker push $dest_repo/$image_name:$image_tag \
-        && docker rmi $line \
-        && docker rmi $dest_repo/$image_name:$image_tag \
-    || { red_echo "同步镜像[ $line ]"; echo "$line" | tee -a $faillog ; }
+    docker pull $line &&
+        docker tag $line $dest_repo/$image_name:$image_tag &&
+        docker push $dest_repo/$image_name:$image_tag &&
+        docker rmi $line &&
+        docker rmi $dest_repo/$image_name:$image_tag ||
+        {
+            red_echo "同步镜像[ $line ]"
+            echo "$line" | tee -a $faillog
+        }
 }
 
 function sync_image() {
     local line=$*
     local image_name
     local image_tag
-    line=$(echo "$line"|sed 's@docker.io/@@g')
-    if [[ ! -z $(echo "$line"|grep '/') ]]; then
+    line=$(echo "$line" | sed 's@docker.io/@@g')
+    if [[ ! -z $(echo "$line" | grep '/') ]]; then
         case $dest_registry in
-            library)
-            image_name=$(echo $line|awk -F':|/' '{print $(NF-2)"/"$(NF-1)}')
+        library)
+            image_name=$(echo $line | awk -F':|/' '{print $(NF-2)"/"$(NF-1)}')
             ;;
-            *)
-            image_name=$(echo $line|awk -F':|/' '{print $(NF-1)}')
+        *)
+            image_name=$(echo $line | awk -F':|/' '{print $(NF-1)}')
             ;;
         esac
-        if [[ ! -z $(echo "$image_name"|grep -w "$dest_registry") ]]; then
+        if [[ ! -z $(echo "$image_name" | grep -w "$dest_registry") ]]; then
             image_name=$(basename $image_name)
         fi
     else
         image_name=$(echo ${line%:*})
     fi
-    image_tag=$(echo $line|awk -F: '{print $2}')
+    image_tag=$(echo $line | awk -F: '{print $2}')
     check_image $image_name $image_tag
     return_echo "检测镜像 [$image_name] 存在 "
     if [ $? -ne 0 ]; then
@@ -198,26 +202,25 @@ function trap_exit() {
     kill -9 0
 }
 
-function multi_process () {
+function multi_process() {
     trap 'trap_exit;exit 2' 1 2 3 15
 
-    if [ -f $faillog ];then
+    if [ -f $faillog ]; then
         rm -f $faillog
     fi
 
     tmp_fifofile="./$$.fifo"
-    mkfifo $tmp_fifofile      # 新建一个fifo类型的文件
-    exec 6<>$tmp_fifofile      # 将fd6指向fifo类型
+    mkfifo $tmp_fifofile  # 新建一个fifo类型的文件
+    exec 6<>$tmp_fifofile # 将fd6指向fifo类型
     rm $tmp_fifofile
 
-    for ((i=0;i<$thread;i++)); do
+    for ((i = 0; i < $thread; i++)); do
         echo
     done >&6 # 事实上就是在fd6中放置了$thread个回车符
 
     exec 5<$config_file
-    while read line <&5
-    do
-        excute_line=$(echo "$line"|grep -E -v "^#")
+    while read line <&5; do
+        excute_line=$(echo "$line" | grep -E -v "^#")
         if [ -z "$excute_line" ]; then
             continue
         fi
@@ -230,7 +233,7 @@ function multi_process () {
         } &
     done
 
-    wait # 等待所有的后台子进程结束
+    wait      # 等待所有的后台子进程结束
     exec 6>&- # 关闭df6
 }
 
@@ -238,7 +241,7 @@ check_skopeo
 have_skopeo=$?
 multi_process
 
-if [ -f $faillog ];then
+if [ -f $faillog ]; then
     red_echo -e "Has failure job"
     exit 1
 else
