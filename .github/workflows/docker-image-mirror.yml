@@ -80,10 +80,12 @@ jobs:
         id: syncImage
         env:
           DEST_HARBOR_URL: ${{ vars.DEST_HARBOR_URL }}
+          DEST_HARBOR_CRE_USR: ${{ secrets.DEST_HARBOR_CRE_USR }}
+          DEST_HARBOR_CRE_PSW: ${{ secrets.DEST_HARBOR_CRE_PSW }}
         shell: bash
         run: |
           bash jenkins_sync_docker_images.sh docker_images.list
-
+          set +e
           originalImageUrl="${{ steps.pullIssuesPorter.outputs.DOCKER_IMAGE }}"
           # 计算原始镜像URL中 '/' 的数量
           slashCount=$(grep -o "/" <<< "$originalImageUrl" | wc -l)
