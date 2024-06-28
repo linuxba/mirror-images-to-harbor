@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-set -x
+# set -x
 
 cd "$(dirname "$0")" || return 1
 SH_DIR=$(pwd)
