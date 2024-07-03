@@ -84,6 +84,8 @@ jobs:
           DEST_HARBOR_CRE_PSW: ${{ secrets.DEST_HARBOR_CRE_PSW }}
         shell: bash
         run: |
+          sudo cp zerossl-ecc-ca.crt /usr/local/share/ca-certificates/
+          sudo update-ca-certificates
           bash jenkins_sync_docker_images.sh docker_images.list
           set +e
           originalImageUrl="${{ steps.pullIssuesPorter.outputs.DOCKER_IMAGE }}"
