@@ -243,7 +243,7 @@ have_skopeo=$?
 multi_process
 
 if [ -f $faillog ]; then
-    red_echo -e "Has failure job"
+    red_echo "Has failure job"
     exit 1
 else
     green_echo "All finish"
