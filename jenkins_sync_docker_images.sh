@@ -111,7 +111,9 @@ function check_image() {
     local image_name=$1
     local image_tag=$2
     local encoded
-    encoded=$(perl -MURI::Escape -lne 'chomp; print uri_escape($_)' <<<"$image_name")
+    encoded=$(curl -s -o /dev/null -w %{url_effective} --get --data-urlencode "$image_name" "")
+    # 移除前缀部分，只保留编码后的结果
+    encoded=${encoded#/?}
     curl -s -i --connect-timeout 10 -m 20 -u "$DEST_HARBOR_CRE_USR:$DEST_HARBOR_CRE_PSW" -k -X GET \
         -H "accept: application/json" \
         "https://$DEST_HARBOR_URL/api/v2.0/projects/$dest_registry/repositories/$encoded/artifacts/$image_tag/tags?page=1&page_size=10&with_signature=false&with_immutable_status=false" |
