@@ -12,9 +12,6 @@ thread=3                                        # 此处定义线程数
 faillog="./failure.log"                         # 此处定义失败列表,注意失败列表会先被删除再重新写入
 echo >>"$config_file"                           # 加行空行
 
-# echo "${SRC_HARBOR_CRE_PSW}" | docker login --username "${SRC_HARBOR_CRE_USR}" --password-stdin $SRC_HARBOR_URL
-echo "${DEST_HARBOR_CRE_PSW}" | docker login --username "${DEST_HARBOR_CRE_USR}" --password-stdin $DEST_HARBOR_URL
-
 #定义输出颜色函数
 function red_echo() {
     #用法:  red_echo "内容"
@@ -138,6 +135,11 @@ function skopeo_sync_image() {
     return $?
 }
 
+function docker_login() {
+    # echo "${SRC_HARBOR_CRE_PSW}" | docker login --username "${SRC_HARBOR_CRE_USR}" --password-stdin $SRC_HARBOR_URL
+    echo "${DEST_HARBOR_CRE_PSW}" | docker login --username "${DEST_HARBOR_CRE_USR}" --password-stdin $DEST_HARBOR_URL
+}
+
 function docker_sync_image() {
     local line=$1
     local image_name=$2
@@ -236,18 +238,25 @@ function multi_process() {
 
     wait      # 等待所有的后台子进程结束
     exec 6>&- # 关闭df6
+
+    if [ -f $faillog ]; then
+        echo "#############################"
+        red_echo "Has failure job list:"
+        echo
+        cat $faillog
+        echo "#############################"
+        exit 1
+    else
+        green_echo "All finish"
+        echo "#############################"
+    fi
 }
 
 check_skopeo
 have_skopeo=$?
-multi_process
-
-if [ -f $faillog ]; then
-    red_echo "Has failure job"
-    exit 1
-else
-    green_echo "All finish"
-    echo "####################################################"
+if [ "$have_skopeo" -ne 0 ]; then
+    docker_login
 fi
+multi_process
 
 exit 0
