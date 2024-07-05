@@ -12,9 +12,6 @@ thread=3                                        # 此处定义线程数
 faillog="./failure.log"                         # 此处定义失败列表,注意失败列表会先被删除再重新写入
 echo >>"$config_file"                           # 加行空行
 
-# echo "${SRC_HARBOR_CRE_PSW}" | docker login --username "${SRC_HARBOR_CRE_USR}" --password-stdin $SRC_HARBOR_URL
-echo "${DEST_HARBOR_CRE_PSW}" | docker login --username "${DEST_HARBOR_CRE_USR}" --password-stdin $DEST_HARBOR_URL
-
 #定义输出颜色函数
 function red_echo() {
     #用法:  red_echo "内容"
@@ -114,7 +111,9 @@ function check_image() {
     local image_name=$1
     local image_tag=$2
     local encoded
-    encoded=$(perl -MURI::Escape -lne 'chomp; print uri_escape($_)' <<<"$image_name")
+    encoded=$(curl -s -o /dev/null -w %{url_effective} --get --data-urlencode "$image_name" "http://localhost")
+    # 移除前缀部分，只保留编码后的结果
+    encoded=$(echo $encoded | sed 's@http://localhost/?@@')
     curl -s -i --connect-timeout 10 -m 20 -u "$DEST_HARBOR_CRE_USR:$DEST_HARBOR_CRE_PSW" -k -X GET \
         -H "accept: application/json" \
         "https://$DEST_HARBOR_URL/api/v2.0/projects/$dest_registry/repositories/$encoded/artifacts/$image_tag/tags?page=1&page_size=10&with_signature=false&with_immutable_status=false" |
@@ -136,6 +135,11 @@ function skopeo_sync_image() {
         docker://${line} \
         docker://$dest_repo/$image_name:$image_tag
     return $?
+}
+
+function docker_login() {
+    # echo "${SRC_HARBOR_CRE_PSW}" | docker login --username "${SRC_HARBOR_CRE_USR}" --password-stdin $SRC_HARBOR_URL
+    echo "${DEST_HARBOR_CRE_PSW}" | docker login --username "${DEST_HARBOR_CRE_USR}" --password-stdin $DEST_HARBOR_URL
 }
 
 function docker_sync_image() {
@@ -236,18 +240,25 @@ function multi_process() {
 
     wait      # 等待所有的后台子进程结束
     exec 6>&- # 关闭df6
+
+    if [ -f $faillog ]; then
+        echo "#############################"
+        red_echo "Has failure job list:"
+        echo
+        cat $faillog
+        echo "#############################"
+        exit 1
+    else
+        green_echo "All finish"
+        echo "#############################"
+    fi
 }
 
 check_skopeo
 have_skopeo=$?
-multi_process
-
-if [ -f $faillog ]; then
-    red_echo "Has failure job"
-    exit 1
-else
-    green_echo "All finish"
-    echo "####################################################"
+if [ "$have_skopeo" -ne 0 ]; then
+    docker_login
 fi
+multi_process
 
 exit 0
