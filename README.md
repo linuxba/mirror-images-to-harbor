@@ -17,3 +17,14 @@
 > - issues 的内容设定为`skopeo copy`的参数，默认为空
 
 其它参数可以参考：[skopeo copy](https://github.com/containers/skopeo/blob/main/docs/skopeo-copy.1.md)
+
+## 我的私有仓库是 harbor.ygqygq2.com
+其中 `library` 项目中保留的为 [创建 issue](../..//issues/new) 推送上去的镜像地址，保留最近拉取的5个 artifacts，对应关系是：
+
+* `nginx:latest` 对应 `harbor.ygqygq2.com/library/nginx:latest`
+* `bitnami/nginx:latest` 对应 `harbor.ygqygq2.com/library/bitnami/nginx:latest`
+
+其中 `proxy` 项目为代理 docker hub，保留最近7天被拉取过的 artifacts，对应关系是：
+
+* `nginx:latest 对应 harbor.ygqygq2.com/proxy/library/nginx:latest`
+* `bitnami/nginx:latest 对应 harbor.ygqygq2.com/proxy/bitnami/nginx:latest`
