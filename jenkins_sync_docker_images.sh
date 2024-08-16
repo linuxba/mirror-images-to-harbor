@@ -111,9 +111,11 @@ function check_image() {
     local image_name=$1
     local image_tag=$2
     local encoded
-    encoded=$(curl -s -o /dev/null -w %{url_effective} --get --data-urlencode "$image_name" "http://localhost")
-    # 移除前缀部分，只保留编码后的结果
-    encoded=$(echo $encoded | sed 's@http://localhost/?@@')
+    # encoded=$(curl -s -o /dev/null -w %{url_effective} --get --data-urlencode "$image_name" "http://localhost")
+    # # 移除前缀部分，只保留编码后的结果
+    # encoded=$(echo $encoded | sed 's@http://localhost/?@@')
+    # 二次编码 e.g. a/b -> a%2Fb -> a%252Fb
+    encoded=$(echo $image_name | sed 's@/@%252F@g')
     curl -s -i --connect-timeout 10 -m 20 -u "$DEST_HARBOR_CRE_USR:$DEST_HARBOR_CRE_PSW" -k -X GET \
         -H "accept: application/json" \
         "https://$DEST_HARBOR_URL/api/v2.0/projects/$dest_registry/repositories/$encoded/artifacts/$image_tag/tags?page=1&page_size=10&with_signature=false&with_immutable_status=false" |
