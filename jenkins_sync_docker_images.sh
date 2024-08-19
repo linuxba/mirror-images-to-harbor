@@ -163,7 +163,7 @@ function sync_image() {
     local line=$*
     local image_name
     local image_tag
-    line=$(echo "$line" | sed 's@docker.io/@@g')
+    line=$(echo "$line" | sed 's@docker.io/@@')
     if [[ ! -z $(echo "$line" | grep '/') ]]; then
         case $dest_registry in
         library)
@@ -179,6 +179,7 @@ function sync_image() {
     else
         image_name=$(echo ${line%:*})
     fi
+    image_name=$(echo $image_name | sed 's@registry.k8s.io/@@' | sed 's@quay.io/@@')
     image_tag=$(echo $line | awk -F: '{print $2}')
     check_image $image_name $image_tag
     return_echo "检测镜像 [$image_name] 存在 "
